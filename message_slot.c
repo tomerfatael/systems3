@@ -58,3 +58,12 @@ static int device_open(struct inode* inode, struct file* file) {
     }
     return SUCCESS;
 }
+
+static int device_release(struct inode* inode, struct file* file) {
+    kfree(file->private_data);
+    return SUCCESS;
+}
+
+static ssize_t device_read(struct file* file, char __user* buffer, size_t ength,loff_t* offset) {
+    
+}
