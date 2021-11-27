@@ -64,6 +64,27 @@ static int device_release(struct inode* inode, struct file* file) {
     return SUCCESS;
 }
 
-static ssize_t device_read(struct file* file, char __user* buffer, size_t ength,loff_t* offset) {
-    
+static ssize_t device_write(struct file* file, const char __user* buffer, size_t length, loff_t* offset) {
+    /*error cases*/
+    if(file->private_data->channelId == 0) {
+        errno = EINVAL;
+        return -1;
+    }
+    if(length == 0 || length > BUF_LEN) {
+        errno = EMSGSIZE;
+        return -1;
+    }
+    if(buffer == NULL) { //checkk
+        errno = EFAULT;
+        return -1;
+    }
+
+    /*no errors*/
+    for(int i = 0; i < length && i < BUF_LEN; i++) {
+        get_user()
+    }
+}
+
+static ssize_t device_read(struct file* file, char __user* buffer, size_t length, loff_t* offset) {
+
 }

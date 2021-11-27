@@ -1,11 +1,12 @@
 #ifndef _MESSAGE_SLOT_H_
 #define _MESSAGE_SLOT_H_
 
-#include <linux/kernel.h>   /* We're doing kernel work */
-#include <linux/module.h>   /* Specifically, a module */
-#include <linux/fs.h>       /* for register_chrdev */
-#include <linux/uaccess.h>  /* for get_user and put_user */
-#include <linux/string.h>   /* for memset. NOTE - not string.h!*/
+#include <linux/kernel.h>   
+#include <linux/module.h>   
+#include <linux/fs.h>       
+#include <linux/uaccess.h>  
+#include <linux/string.h>
+#include <errno.h> //check if neede   
 
 MODULE_LICENSE("GPL");
 
