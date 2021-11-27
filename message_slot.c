@@ -5,7 +5,13 @@
 
 #include "message_slot.h"
 
-/*device setup*/
+typedef strucrt FILEDATA {
+    int minor, channelId;
+} FILEDATA
+
+int minorArr[256] = {0};
+
+/**device setup**/
 struct file_operations Fops = {
   .owner	  = THIS_MODULE, 
   .read           = device_read,
@@ -22,7 +28,7 @@ static int __init simple_init(void) {
     registerSuccess = register_chrdev(240, DEVICE_RANGE_NAME, &Fops);
     // Negative values signify an error
     if(registerSuccess < 0) {
-    printk( KERN_ALERT "%s registraion failed for  %d\n",DEVICE_FILE_NAME, 240);
+    printk(KERN_ALERT "%s registraion failed for  %d\n",DEVICE_FILE_NAME, 240);
     return registerSuccess;
     }
 
@@ -31,3 +37,24 @@ static int __init simple_init(void) {
 }
 
 /*device release*/
+static void __exit simple_cleanup(void) {
+  unregister_chrdev(240, DEVICE_RANGE_NAME);
+}
+
+/**device functions**/
+static int device_open(struct inode* inode, struct file* file) {
+    int minor = iminor(inode);
+    if(!minorArr[minor]) {
+        minorArr[minor] = 1;
+        FILEDATA* fileData;
+        fileData = kmalloc(sizeof(FILEDATA), GFP_KERNEL);
+        if(fileData == NULL) {
+            printk("kmalloc function failed", file);
+            return 1;
+        }
+        fileData->minor = minor;
+        fileData->channelId = 0;
+        file->private_data = (void*)fileData;
+    }
+    return SUCCESS;
+}
