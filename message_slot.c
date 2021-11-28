@@ -5,11 +5,12 @@
 
 #include "message_slot.h"
 
-typedef strucrt FILEDATA {
+typedef strucrt DEVICE {
     int minor, channelId;
-} FILEDATA
+} DEVICE
 
-int minorArr[256] = {0};
+
+struct radix_tree_root* minorArr[256] = {NULL};
 
 /**device setup**/
 struct file_operations Fops = {
@@ -42,12 +43,12 @@ static void __exit simple_cleanup(void) {
 }
 
 /**device functions**/
-static int device_open(struct inode* inode, struct file* file) {
+static int device_open(struct inode* inode, struct file* file) { //todo and understand
     int minor = iminor(inode);
-    if(!minorArr[minor]) {
+    if(minorArr[minor] != NULL) { //checkk
         minorArr[minor] = 1;
-        FILEDATA* fileData;
-        fileData = kmalloc(sizeof(FILEDATA), GFP_KERNEL);
+        DEVICE* fileData;
+        fileData = kmalloc(sizeof(DEVICE), GFP_KERNEL);
         if(fileData == NULL) {
             printk("kmalloc function failed", file);
             return 1;
