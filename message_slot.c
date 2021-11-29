@@ -6,15 +6,17 @@
 #include "message_slot.h" //check if this is really the only include neededs
 
 typedef struct DEVICE {
-    int minor, channelId;
+    int minor, numOfChannels;
+    CHANNEL *head;
 } DEVICE;
 
-typedef struct NODE {
-    int length;
+typedef struct CHANNEL {
+    int channelId, length;
     char message[BUF_LEN];
-} NODE;
+    CHANNEL *next;
+} CHANNEL;
 
-struct radix_tree_root* minorArr[256] = {NULL};
+DEVICE* devicesMinorArr[256] = {NULL};
 
 /**device setup**/
 struct file_operations Fops = {
@@ -50,19 +52,15 @@ static void __exit simple_cleanup(void) {
 /*device open*/
 static int device_open(struct inode* inode, struct file* file) { //todo and understand
     int minor = iminor(inode);
-    if(minorArr[minor] != NULL) { //checkk
-        minorArr[minor] = 1;
-        DEVICE* fileData;
-        fileData = kmalloc(sizeof(DEVICE), GFP_KERNEL);
-        if(fileData == NULL) {
-            printk("kmalloc function failed", file);
-            return 1;
+    if(devicesMinorArr[minor] == NULL) {
+        DEVICE* device = (DEVICE*) kmalloc(sizeof(DEVICE), GFP_KERNEL);
+        /*allocation fail*/
+        if(device == NULL) { 
+            return 1; //check if needed to return errno
         }
-        fileData->minor = minor;
-        fileData->channelId = 0;
-        file->private_data = (void*)fileData;
+        
     }
-    return SUCCESS;
+    
 }
 
 /*device release*/
