@@ -93,7 +93,13 @@ static int __init simple_init(void) {
 
 /*device release*/
 static void __exit simple_cleanup(void) { //need to clean LL or in device release?
-  unregister_chrdev(240, DEVICE_RANGE_NAME);
+    for(int i = 0; i < 256; i++) {
+        if(devicesMinorArr[i] != NULL) {
+            freeChannelsLL(devicesMinorArr[i]->head);
+            kfree(devicesMinorArr[i]); ///checkkkkkkkkkkkk if needed
+        }
+    }
+    unregister_chrdev(240, DEVICE_RANGE_NAME);
 }
 
 /**device functions**/
