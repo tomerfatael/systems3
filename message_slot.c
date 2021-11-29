@@ -3,12 +3,16 @@
 #undef MODULE
 #define MODULE
 
-#include "message_slot.h"
+#include "message_slot.h" //check if this is really the only include neededs
 
-typedef strucrt DEVICE {
+typedef struct DEVICE {
     int minor, channelId;
-} DEVICE
+} DEVICE;
 
+typedef struct NODE {
+    int length;
+    char message[BUF_LEN];
+} NODE;
 
 struct radix_tree_root* minorArr[256] = {NULL};
 
@@ -43,6 +47,7 @@ static void __exit simple_cleanup(void) {
 }
 
 /**device functions**/
+/*device open*/
 static int device_open(struct inode* inode, struct file* file) { //todo and understand
     int minor = iminor(inode);
     if(minorArr[minor] != NULL) { //checkk
@@ -60,32 +65,43 @@ static int device_open(struct inode* inode, struct file* file) { //todo and unde
     return SUCCESS;
 }
 
+/*device release*/
 static int device_release(struct inode* inode, struct file* file) {
     kfree(file->private_data);
     return SUCCESS;
 }
 
+/*device write*/
 static ssize_t device_write(struct file* file, const char __user* buffer, size_t length, loff_t* offset) {
     /*error cases*/
     if(file->private_data->channelId == 0) {
-        errno = EINVAL;
-        return -1;
+        return -EINVAL;
     }
     if(length == 0 || length > BUF_LEN) {
-        errno = EMSGSIZE;
-        return -1;
+        return -EMSGSIZE;
     }
     if(buffer == NULL) { //checkk
-        errno = EFAULT;
-        return -1;
+        return -EFAULT;
     }
 
     /*no errors*/
+
+
     for(int i = 0; i < length && i < BUF_LEN; i++) {
         get_user()
     }
 }
 
+/*device read*/
 static ssize_t device_read(struct file* file, char __user* buffer, size_t length, loff_t* offset) {
 
+}
+
+/*device ioctl*/
+static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsigned long ioctl_param) {
+    if(ioctl_param == 0 || ioctl_command_id != MSG_SLOT_CHANNEL){
+        return -EINVAL;
+    }
+    file->private_data->channelId = ioctl_param;
+    return 0;
 }
