@@ -18,6 +18,24 @@ typedef struct CHANNEL {
 
 DEVICE* devicesMinorArr[256] = {NULL};
 
+/*channels linked list functions*/
+void freeChannelsLL(CHANNEL* head) { //toCheck
+    CHANNEL* node = head;
+    CHANNEL* next;
+    while(node != NULL) {
+        next = node->next;
+        kfree(node);
+        node = next;
+    }
+}
+
+void addChannelToLL(CHANNEL* channel, CHANNEL* head) {
+    while(head->next != NULL) {
+        head = head->next;
+    }
+    head->next = channel;
+}
+
 /**device setup**/
 struct file_operations Fops = {
   .owner	  = THIS_MODULE, 
@@ -64,7 +82,7 @@ static int device_open(struct inode* inode, struct file* file) { //todo and unde
 }
 
 /*device release*/
-static int device_release(struct inode* inode, struct file* file) {
+static int device_release(struct inode* inode, struct file* file) { //dont need to free all allocated memory for device and channels?
     kfree(file->private_data);
     return SUCCESS;
 }
