@@ -148,8 +148,29 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
 
 /*device read*/
 static ssize_t device_read(struct file* file, char __user* buffer, size_t length, loff_t* offset) {
-    
+    DEVICE* device = (DEVICE*)file->private_data;
+    /*there is no channel in the provided device*/
+    if(device->curChannel == 0) {
+        return -EINVAL;
+    }
+    CHANNEL* channel = findChannel(device, device->curChannel);
+    /*there is no message in the channel*/
+    if(channel->length == 0) {
+        return -EWOULDBLOCK;
+    }
+    /*the provided buffer is too small*/
+    if(length < channel->length) {
+        return -ENOSPC;
+    }
 
+    for(int i = 0; i < channel->length && i < BUF_LEN; i++) {
+        put_user(channel->message[i], &buffer[i]);  
+    }
+
+    if(length != i) {
+        return -ENOMEM; //alsoo check
+    }
+    return length;
 }
 
 /*device ioctl*/
