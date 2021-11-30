@@ -5,18 +5,19 @@
 
 #include "message_slot.h" //check if this is really the only include neededs
 
+typedef struct CHANNEL {
+    int length;
+    unsigned int channelId;
+    char message[BUF_LEN];
+    struct CHANNEL *next;
+} CHANNEL;
+
 typedef struct DEVICE {
     int minor, numOfChannels;
     unsigned int curChannel;
     CHANNEL *head;
 } DEVICE;
 
-typedef struct CHANNEL {
-    int length;
-    unsigned int channelId;
-    char message[BUF_LEN];
-    CHANNEL *next;
-} CHANNEL;
 
 DEVICE* devicesMinorArr[256] = {NULL};
 
