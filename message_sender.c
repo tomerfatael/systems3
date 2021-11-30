@@ -21,6 +21,7 @@ int main(int argc, char** argv) {
         exit(1);
     }
     flag = write(fd, message, strlen(message));
+    close(fd);
     if(flag != strlen(message)){
         perror("write failed");
         exit(1);

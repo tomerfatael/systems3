@@ -18,6 +18,13 @@ int main(int argc, char** argv) {
         perror("ioctl failed");
         exit(1);
     }
-    
+    char buffer[BUF_LEN];
+    flag = read(fd, buffer, BUF_LEN);
+    close(fd);
+    if(flag < 0) {
+        perror("read failed");
+        exit(1);
+    }
+    return SUCCESS;
 
 }
