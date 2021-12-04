@@ -6,7 +6,8 @@
 #include <linux/fs.h>       
 #include <linux/uaccess.h>  
 #include <linux/string.h>
-#include <errno.h> //check if neede
+#include <linux/slab.h>
+#include <errno.h> 
 #include <stdio.h>
 #include <stdlib.h>
   
