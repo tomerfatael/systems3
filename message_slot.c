@@ -89,6 +89,7 @@ static int device_open(struct inode* inode, struct file* file) { //todo and unde
             return 1; //check if needed to return errno
         }
     }
+    return SUCCESS;
 }
 
 /*device release*/
@@ -186,6 +187,7 @@ struct file_operations Fops = {
   .read           = device_read,
   .write          = device_write,
   .open           = device_open,
+  .unlocked_ioctl = device_ioctl,
   .release        = device_release,
 };
 
