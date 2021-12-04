@@ -88,9 +88,7 @@ static int device_open(struct inode* inode, struct file* file) { //todo and unde
         if(device == NULL) { 
             return 1; //check if needed to return errno
         }
-        
     }
-    
 }
 
 /*device release*/
@@ -213,8 +211,11 @@ static void __exit simple_cleanup(void) { //need to clean LL or in device releas
     for(i = 0; i < 256; i++) {
         if(devicesMinorArr[i] != NULL) {
             freeChannelsLL(devicesMinorArr[i]->head);
-            kfree(devicesMinorArr[i]); ///checkkkkkkkkkkkk if needed
+            //kfree(devicesMinorArr[i]); ///checkkkkkkkkkkkk if needed
         }
     }
     unregister_chrdev(240, DEVICE_RANGE_NAME);
 }
+
+module_init(simple_init);
+module_exit(simple_cleanup);
