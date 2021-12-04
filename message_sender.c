@@ -1,16 +1,27 @@
 #include "message_slot.h"
+#include <string.h>
+#include <sys/ioctl.h>
+#include<stdlib.h>
+#include <stdio.h>
+#include <fcntl.h> //check if need
+#include <zconf.h>
 
 int main(int argc, char** argv) {
+    char* filePath, message;
+    unsigned int channelId;
+    long flag;
+    int fd;
+    
     if(argc != 4) {
         perror("invalid input");
         exit(1);
     }
-    char* filePath = argv[1];
-    unsigned int channelId = atoi(argv[2]);
-    char* message = argv[3];
-    long flag;
+    filePath = argv[1];
+    channelId = atoi(argv[2]);
+     message = argv[3];
+    flag;
 
-    int fd = open(filePath, O_WRONLY);
+    fd = open(filePath, O_WRONLY);
     if(fd == -1) {
         perror("failed to open file");
         exit(1);
