@@ -10,6 +10,7 @@
 #include <errno.h> 
 #include <stdio.h>
 #include <stdlib.h>
+#include <linux/ioctl.h>
   
 
 MODULE_LICENSE("GPL");
