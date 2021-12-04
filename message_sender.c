@@ -7,7 +7,7 @@
 #include <zconf.h>
 
 int main(int argc, char** argv) {
-    char* filePath, message;
+    char *filePath, *message;
     unsigned int channelId;
     long flag;
     int fd;
@@ -19,7 +19,6 @@ int main(int argc, char** argv) {
     filePath = argv[1];
     channelId = atoi(argv[2]);
      message = argv[3];
-    flag;
 
     fd = open(filePath, O_WRONLY);
     if(fd == -1) {

@@ -7,7 +7,7 @@
 #include <zconf.h>
 
 int main(int argc, char** argv) {
-    char* filePath;
+    char *filePath;
     unsigned int channelId;
     long flag;
     int fd;
@@ -18,8 +18,8 @@ int main(int argc, char** argv) {
         exit(1);
     }
     filePath = argv[1];
-    channelId = argv[2];
-    flag;
+    channelId = atoi(argv[2]);
+
     fd = open(filePath, O_RDONLY);
     if(fd == -1) {
         perror("failed to open file");

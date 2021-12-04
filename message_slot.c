@@ -33,7 +33,7 @@ DEVICE* devicesMinorArr[256] = {NULL};
 
 /*free all allocated memory for channels LL*/
 void freeChannelsLL(CHANNEL* head) { //toCheck
-    CHANNEL* node,next;
+    CHANNEL *node, *next;
     node = head;
     while(node != NULL) {
         next = node->next;
@@ -44,7 +44,7 @@ void freeChannelsLL(CHANNEL* head) { //toCheck
 
 /*add new channel*/
 int addChannelToLL(DEVICE* device, unsigned int channelId) {
-    CHANNEL* channel, head;
+    CHANNEL *channel, *head;
     channel = kmalloc(sizeof(CHANNEL), GFP_KERNEL);
     if(channel == NULL) {
         return 1;
@@ -76,51 +76,14 @@ CHANNEL* findChannel(DEVICE* device, unsigned int channelId) {
     return channel;
 }
 
-
-/**device setup**/
-struct file_operations Fops = {
-  .owner	  = THIS_MODULE, 
-  .read           = device_read,
-  .write          = device_write,
-  .open           = device_open,
-  .release        = device_release,
-};
-
-/*device init*/
-static int __init simple_init(void) {
-
-    int registerSuccess;
-    //Register driver capabilities. Obtain major num
-    registerSuccess = register_chrdev(240, DEVICE_RANGE_NAME, &Fops);
-    // Negative values signify an error
-    if(registerSuccess < 0) {
-    printk(KERN_ALERT "%s registraion failed for  %d\n",DEVICE_FILE_NAME, 240);
-    return registerSuccess;
-    }
-
-    printk( "Registeration is successful. The major device number is %d.\n", 240);
-    return 0;
-}
-
-/*device release*/
-static void __exit simple_cleanup(void) { //need to clean LL or in device release?
-    int i;
-    for(i = 0; i < 256; i++) {
-        if(devicesMinorArr[i] != NULL) {
-            freeChannelsLL(devicesMinorArr[i]->head);
-            kfree(devicesMinorArr[i]); ///checkkkkkkkkkkkk if needed
-        }
-    }
-    unregister_chrdev(240, DEVICE_RANGE_NAME);
-}
-
 /**device functions**/
 /*device open*/
 static int device_open(struct inode* inode, struct file* file) { //todo and understand set curChannel to 0
     int minor;
+    DEVICE* device;
     minor = iminor(inode);
     if(devicesMinorArr[minor] == NULL) {
-        DEVICE* device = (DEVICE*) kmalloc(sizeof(DEVICE), GFP_KERNEL);
+        device = (DEVICE*) kmalloc(sizeof(DEVICE), GFP_KERNEL);
         /*allocation fail*/
         if(device == NULL) { 
             return 1; //check if needed to return errno
@@ -139,6 +102,7 @@ static int device_release(struct inode* inode, struct file* file) { //dont need 
 /*device write*/
 static ssize_t device_write(struct file* file, const char __user* buffer, size_t length, loff_t* offset) {
     DEVICE* device;
+    CHANNEL* channel;
     int i;
     device = (DEVICE*)file->private_data;
     /*error cases*/
@@ -152,7 +116,7 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
         return -EFAULT;
     }
 
-    CHANNEL* channel = findChannel(device, device->curChannel);
+    channel = findChannel(device, device->curChannel);
     /*no errors*/
     for(i = 0; i < length && i < BUF_LEN; i++) {
         get_user(channel->message[i], &buffer[i]);
@@ -170,13 +134,14 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
 /*device read*/
 static ssize_t device_read(struct file* file, char __user* buffer, size_t length, loff_t* offset) {
     DEVICE* device;
+    CHANNEL* channel;
     int i;
     device = (DEVICE*)file->private_data;
     /*there is no channel in the provided device*/
     if(device->curChannel == 0) {
         return -EINVAL;
     }
-    CHANNEL* channel = findChannel(device, device->curChannel);
+    channel = findChannel(device, device->curChannel);
     /*there is no message in the channel*/
     if(channel->length == 0) {
         return -EWOULDBLOCK;
@@ -215,4 +180,41 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsig
     }
     device->curChannel = ioctl_param;
     return SUCCESS;
+}
+
+/**device setup**/
+struct file_operations Fops = {
+  .owner	  = THIS_MODULE, 
+  .read           = device_read,
+  .write          = device_write,
+  .open           = device_open,
+  .release        = device_release,
+};
+
+/*device init*/
+static int __init simple_init(void) {
+
+    int registerSuccess;
+    //Register driver capabilities. Obtain major num
+    registerSuccess = register_chrdev(240, DEVICE_RANGE_NAME, &Fops);
+    // Negative values signify an error
+    if(registerSuccess < 0) {
+    printk(KERN_ALERT "%s registraion failed for  %d\n",DEVICE_FILE_NAME, 240);
+    return registerSuccess;
+    }
+
+    printk( "Registeration is successful. The major device number is %d.\n", 240);
+    return 0;
+}
+
+/*device release*/
+static void __exit simple_cleanup(void) { //need to clean LL or in device release?
+    int i;
+    for(i = 0; i < 256; i++) {
+        if(devicesMinorArr[i] != NULL) {
+            freeChannelsLL(devicesMinorArr[i]->head);
+            kfree(devicesMinorArr[i]); ///checkkkkkkkkkkkk if needed
+        }
+    }
+    unregister_chrdev(240, DEVICE_RANGE_NAME);
 }
