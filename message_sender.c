@@ -18,9 +18,9 @@ int main(int argc, char** argv) {
     }
     filePath = argv[1];
     channelId = atoi(argv[2]);
-     message = argv[3];
+    message = argv[3];
 
-    fd = open(filePath, O_WRONLY);
+    fd = open(filePath, O_RDWR);
     if(fd == -1) {
         perror("failed to open file");
         exit(1);

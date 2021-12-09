@@ -15,18 +15,17 @@ MODULE_LICENSE("GPL");
 
 typedef struct CHANNEL {
     int length;
-    unsigned int channelId;
+    unsigned long channelId;
     char* message;
     struct CHANNEL *next;
 } CHANNEL;
 
 typedef struct DEVICE {
     int minor;
-    unsigned int curChannel;
-    CHANNEL *head;
+    unsigned long curChannel;
 } DEVICE;
 
-DEVICE* devicesMinorArr[256] = {NULL};
+CHANNEL* devicesMinorArr[256] = {NULL};
 
 /*channels linked list functions*/
 
@@ -36,14 +35,15 @@ void freeChannelsLL(CHANNEL* head) {
     node = head;
     while(node != NULL) {
         next = node->next;
-        kfree(node->message);
+        if (node->message != NULL){
+        kfree(node->message);}
         kfree(node);
         node = next;
     }
 }
 
 /*add new channel*/
-CHANNEL* addChannelToLL(DEVICE* device, unsigned int channelId) {
+CHANNEL* addChannelToLL(int minor, unsigned long channelId) {
     CHANNEL *channel, *head;
     channel = kmalloc(sizeof(CHANNEL), GFP_KERNEL);
     if(channel == NULL) {
@@ -52,12 +52,7 @@ CHANNEL* addChannelToLL(DEVICE* device, unsigned int channelId) {
     channel->channelId = channelId;
     channel->length = 0;
 
-    head = device->head;
-
-    if(head == NULL) {
-        device->head = channel;
-        return channel;
-    }
+    head = devicesMinorArr[minor];
 
     while(head->next != NULL) {
         head = head->next;
@@ -67,13 +62,13 @@ CHANNEL* addChannelToLL(DEVICE* device, unsigned int channelId) {
 }
 
 /*find channel by id*/
-CHANNEL* findChannel(DEVICE* device, unsigned int channelId) {
-    CHANNEL* channel;
-    channel = device->head;
-    while(channel != NULL && channel->channelId != channelId) {
-        channel = channel->next;
+CHANNEL* findChannel(int minor, unsigned long channelId) {
+    CHANNEL *head;
+    head = devicesMinorArr[minor];
+    while(head != NULL && head->channelId != channelId) {
+        head = head->next;
     }
-    return channel;
+    return head;
 }
 
 /**device functions**/
@@ -85,16 +80,21 @@ static int device_open(struct inode* inode, struct file* file) { //todo and unde
     device = kmalloc(sizeof(DEVICE), GFP_KERNEL);
     /*allocation failed*/
     if(device == NULL) {
-        return 1;
+        return -EINVAL;
     }
     device->minor = minor;
     device->curChannel = 0;
-    file->private_data = (void*)device;
     if(devicesMinorArr[minor] == NULL) {
-        devicesMinorArr[minor] = device;
-    }
-    return SUCCESS;
+        devicesMinorArr[minor] = kmalloc(sizeof(CHANNEL), GFP_KERNEL);
+        if(devicesMinorArr[minor] == NULL) return 1;
+        devicesMinorArr[minor]->length = 0;
+        devicesMinorArr[minor]->channelId = 0;
+        devicesMinorArr[minor]->message = NULL;
+        devicesMinorArr[minor]->next = NULL;
 
+    }
+    file->private_data = (void*)device;
+    return SUCCESS;
 }
 
 /*device release*/
@@ -106,20 +106,23 @@ static int device_release(struct inode* inode, struct file* file) { //dont need 
 /*device write*/
 static ssize_t device_write(struct file* file, const char __user* buffer, size_t length, loff_t* offset) {
     DEVICE* device;
-    CHANNEL* channel;
-    int i;
-    device = (DEVICE*)file->private_data;
-    /*error cases*/
-    if(device->curChannel == 0 || buffer == NULL) {
-        return -EINVAL;
-    }
-    if(length == 0 || length > BUF_LEN) {
+CHANNEL* channel;
+int i;
+device = (DEVICE*)file->private_data;
+/*error cases*/
+if(device == NULL){
+return -EINVAL;
+}
+if(device->curChannel == 0 || buffer == NULL) {
+return -EINVAL;
+}
+if(length == 0 || length > BUF_LEN) {
         return -EMSGSIZE;
     }
 
-    channel = findChannel(device, device->curChannel);
+    channel = findChannel(device->minor, device->curChannel);
     if(channel == NULL) {
-        channel = addChannelToLL(device, device->curChannel);
+        channel = addChannelToLL(device->minor, device->curChannel);
         if(channel == NULL) {
             return -EINVAL;
         }
@@ -128,6 +131,7 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
     if(channel->message == NULL) {
         return -EINVAL;
     }
+
     /*no errors*/
     for(i = 0; i < length && i < BUF_LEN; i++) {
         get_user(channel->message[i], &buffer[i]);
@@ -148,13 +152,20 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
     CHANNEL* channel;
     int i;
     device = (DEVICE*)file->private_data;
+    if(device == NULL){
+    return -EINVAL;
+    }
     /*there is no channel in the provided device*/
     if(device->curChannel == 0 || buffer == NULL) {
         return -EINVAL;
     }
-    channel = findChannel(device, device->curChannel);
+    channel = findChannel(device->minor, device->curChannel);
+if(channel == NULL) {
+return -EINVAL;
+}
     /*there is no message in the channel*/
-    if(channel->length == 0) {
+    //TODO: make sure length is updated correctly!
+    if(channel->message == NULL) {
         return -EWOULDBLOCK;
     }
     /*the provided buffer is too small*/
@@ -174,7 +185,7 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
 
 /*device ioctl*/
 static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsigned long ioctl_param) {
-    ((DEVICE*)file->private_data)->curChannel = (void*)ioctl_param;
+    ((DEVICE*)file->private_data)->curChannel = ioctl_param;
     return SUCCESS;
 }
 
@@ -206,13 +217,12 @@ static int __init simple_init(void) {
 
 /*device release*/
 static void __exit simple_cleanup(void) { //need to clean LL or in device release?
-    int i;
-    for(i = 0; i < 256; i++) {
-        if(devicesMinorArr[i] != NULL) {
-            freeChannelsLL(devicesMinorArr[i]->head);
-            kfree(devicesMinorArr[i]);
-        }
-    }
+   int i;
+   for(i = 0; i < 256; i++) {
+       if(devicesMinorArr[i] != NULL) {
+           freeChannelsLL(devicesMinorArr[i]);
+       }
+   }
     unregister_chrdev(240, DEVICE_RANGE_NAME);
 }
 
