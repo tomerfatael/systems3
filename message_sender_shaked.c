@@ -1,4 +1,3 @@
-
 #include "message_slot.h"
 #include <stdio.h>
 #include <stdlib.h>
