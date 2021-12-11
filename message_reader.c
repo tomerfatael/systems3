@@ -1,10 +1,10 @@
 #include "message_slot.h"
-#include <string.h>
-#include <sys/ioctl.h>
-#include<stdlib.h>
 #include <stdio.h>
-#include <fcntl.h> 
-#include <zconf.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include <string.h>
 
 int main(int argc, char** argv) {
     char *filePath, *strt;

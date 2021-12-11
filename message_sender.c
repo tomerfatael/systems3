@@ -1,10 +1,10 @@
 #include "message_slot.h"
-#include <string.h>
-#include <sys/ioctl.h>
-#include<stdlib.h>
 #include <stdio.h>
-#include <fcntl.h> 
-#include <zconf.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include <string.h>
 
 int main(int argc, char** argv) {
     char *filePath, *message, *strt;
@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
     channelId = strtol(argv[2], &strt, 10);
     message = argv[3];
 
-    fd = open(filePath, O_RDWR);
+    fd = open(filePath, O_WRONLY);
     if(fd == -1) {
         perror("failed to open file");
         exit(1);
