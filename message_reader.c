@@ -36,6 +36,11 @@ int main(int argc, char** argv) {
         perror("read failed");
         exit(1);
     }
+    else {
+        if (write(STDOUT_FILENO, buffer, flag) == -1){
+        perror("writing failed");
+        }
+    }
     close(fd);
     return SUCCESS;
 
