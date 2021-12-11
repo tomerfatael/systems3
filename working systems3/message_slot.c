@@ -66,14 +66,6 @@ CHANNEL* findChannel(int minor, unsigned long channelId) {
 }
 
 /**device functions**/
-
-void initializeDevice(DEVICE* device, unsigned long channelId) {
-    devicesMinorArr[device->minor]->channelId = channelId;
-    devicesMinorArr[device->minor]->length = 0;
-    devicesMinorArr[device->minor]->message = NULL;
-    devicesMinorArr[device->minor]->next = NULL;
-}
-
 /*device open*/
 static int device_open(struct inode* inode, struct file* file) { 
     int minor;
@@ -173,7 +165,7 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
 static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsigned long ioctl_param) {
     DEVICE* device;
     CHANNEL* channel;
-    if (ioctl_command_id != MSG_SLOT_CHANNEL || ioctl_param == 0) {
+    if (ioctl_command_id != MSG_SLOT_CHANNEL || ioctl_param <= 0) {
         return -EINVAL;
     }
     device = (DEVICE*)file->private_data;
@@ -181,7 +173,10 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsig
     if(devicesMinorArr[device->minor] == NULL){
         devicesMinorArr[device->minor] = kmalloc(sizeof(CHANNEL), GFP_KERNEL);
         if(devicesMinorArr[device->minor] == NULL) return -EINVAL;
-        initializeDevice(device, ioctl_param);
+        devicesMinorArr[device->minor]->channelId = ioctl_param;
+        devicesMinorArr[device->minor]->length = 0;
+        devicesMinorArr[device->minor]->message = NULL;
+        devicesMinorArr[device->minor]->next = NULL;
     }
 
     else{
@@ -189,10 +184,14 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsig
         if(channel == NULL) {
             channel = (CHANNEL*) kmalloc(sizeof(CHANNEL), GFP_KERNEL);
             if(channel == NULL) return -EINVAL;
-            initializeDevice(device, ioctl_param);
+            channel->channelId = ioctl_param;
+            channel->length = 0;
+            channel->message = NULL;
+            channel->next = NULL;
             addChannelToLL(channel, device->minor);
         }
     }
+
     return SUCCESS;
 }
 
@@ -223,7 +222,7 @@ static int __init simple_init(void) {
 }
 
 /*device release*/
-static void __exit simple_cleanup(void) { 
+static void __exit simple_cleanup(void) { //need to clean LL or in device release?
    int i;
    for(i = 0; i < 256; i++) {
        if(devicesMinorArr[i] != NULL) {
