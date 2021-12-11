@@ -67,11 +67,19 @@ CHANNEL* findChannel(int minor, unsigned long channelId) {
 
 /**device functions**/
 
-void initializeDevice(DEVICE* device, unsigned long channelId) {
-    devicesMinorArr[device->minor]->channelId = channelId;
-    devicesMinorArr[device->minor]->length = 0;
-    devicesMinorArr[device->minor]->message = NULL;
-    devicesMinorArr[device->minor]->next = NULL;
+void initializeDevice(CHANNEL* channel, int minor, unsigned long channelId, bool initArr) {
+    if(initArr) {
+        devicesMinorArr[minor]->channelId = channelId;
+        devicesMinorArr[minor]->length = 0;
+        devicesMinorArr[minor]->message = NULL;
+        devicesMinorArr[minor]->next = NULL;
+    }
+    else{
+        channel->channelId = channelId;
+        channel->length = 0;
+        channel->message = NULL;
+        channel->next = NULL;
+    }
 }
 
 /*device open*/
@@ -173,7 +181,7 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
 static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsigned long ioctl_param) {
     DEVICE* device;
     CHANNEL* channel;
-    if (ioctl_command_id != MSG_SLOT_CHANNEL || ioctl_param == 0) {
+    if (ioctl_command_id != MSG_SLOT_CHANNEL || ioctl_param <= 0) {
         return -EINVAL;
     }
     device = (DEVICE*)file->private_data;
@@ -181,7 +189,7 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsig
     if(devicesMinorArr[device->minor] == NULL){
         devicesMinorArr[device->minor] = kmalloc(sizeof(CHANNEL), GFP_KERNEL);
         if(devicesMinorArr[device->minor] == NULL) return -EINVAL;
-        initializeDevice(device, ioctl_param);
+        initializeDevice(channel,device->minor, ioctl_param,true);
     }
 
     else{
@@ -189,7 +197,7 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsig
         if(channel == NULL) {
             channel = (CHANNEL*) kmalloc(sizeof(CHANNEL), GFP_KERNEL);
             if(channel == NULL) return -EINVAL;
-            initializeDevice(device, ioctl_param);
+            initializeDevice(channel,device->minor,ioctl_param,false);
             addChannelToLL(channel, device->minor);
         }
     }
