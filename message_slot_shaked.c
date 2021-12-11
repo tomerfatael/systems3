@@ -17,7 +17,8 @@ struct channel* open_devices[257] = {NULL}; //initial the array
 //---------------------- UTILITIES FUNCTIONS -------------------------
 
 void update_channels_list(channel* new_node, unsigned int minor) {
-    if (open_devices[minor] == NULL) {              // need to initialize the list
+    // function that updates the relevant channels list with the new channel
+    if (open_devices[minor] == NULL) {
         open_devices[minor] = new_node;
     }
     else{
@@ -29,8 +30,8 @@ void update_channels_list(channel* new_node, unsigned int minor) {
         head->next = new_node;
     }
 }
-
 channel* extract_channel(unsigned int minor, unsigned int channel_id){
+    // function that extract the desire channel struct and return it, if doesnt exists return NULL
     channel* head = NULL;
     head = open_devices[minor];
     if (channel_id == -1) {
@@ -49,16 +50,15 @@ channel* extract_channel(unsigned int minor, unsigned int channel_id){
 static int device_open(struct inode* inode, struct file* file) {
 	struct device *new_device;
 	unsigned int minor;
-    minor = iminor(inode);									    // getting the minor number of device
-	new_device = kmalloc(sizeof(struct device), GFP_KERNEL);
+    minor = iminor(inode);									                // getting the minor number of device
+	new_device = kmalloc(sizeof(struct device), GFP_KERNEL);      // allocate kernel memory to device
 	if (new_device == NULL) {
 		printk("device file kmalloc failed inside device_open(%p)\n", file);
 		return -EINVAL;
 	}
-
-    new_device->minor = minor; 								    // store minor number in device file
-    new_device->curr_channel_id = 0;                            // initialize channel id
-	file->private_data = (void*) new_device;					// store a pointer from the file struct to the device data
+    new_device->minor = minor; 								                // store minor number in device file
+    new_device->curr_channel_id = 0;                                        // initialize channel id
+	file->private_data = (void*) new_device;					            // store a pointer from the file struct to the device data
 	return SUCCESS;
 }
 //---------------------- DEVICE IOCTL -------------------------
@@ -66,17 +66,17 @@ static long device_ioctl( struct   file* file, unsigned int ioctl_command_id, un
     device* curr_device;
     channel* curr_channel;
     unsigned int minor;
-    if (ioctl_command_id != MSG_SLOT_CHANNEL || ioctl_param <= 0) {
-        return -1;
+    if (ioctl_command_id != MSG_SLOT_CHANNEL || ioctl_param <= 0) {     // validation test
+        return -EINVAL;
     }
     curr_device = (device*) file->private_data;
     minor = curr_device->minor;
     curr_device->curr_channel_id = ioctl_param;
-    if (open_devices[minor] == NULL) {                           // if this is the first time we open that device
+    if (open_devices[minor] == NULL) {                                  // if this is the first time we open that device allocates memory and create new channels list
         open_devices[minor] = kmalloc(sizeof(channel), GFP_KERNEL);
         if (open_devices[minor] == NULL) {
             printk("device file (channel) kmalloc failed inside device_open(%p)\n", file);
-            return -EINVAL; // WHY 1 ????
+            return -EINVAL;
         }
         open_devices[minor]->channel_id = ioctl_param;
         open_devices[minor]->message = NULL;
@@ -109,7 +109,7 @@ static ssize_t device_read( struct file* file, char __user* buffer, size_t lengt
     if (curr_device == NULL) {
         return -EINVAL;
     }
-	if (curr_device->curr_channel_id == 0 || buffer == NULL) { 		// no channel has been set - impossible to read / invalid buffer
+	if (curr_device->curr_channel_id == 0 || buffer == NULL) { 		    // no channel has been set - impossible to read / invalid buffer
         return -EINVAL;
 	}
 	channel_id = curr_device->curr_channel_id;			                // extract the current channel id
@@ -124,14 +124,14 @@ static ssize_t device_read( struct file* file, char __user* buffer, size_t lengt
     if(curr_channel->length > length){
         return -ENOSPC;
     }
-    for(i=0; i<curr_channel->length; i++) {
+    for(i=0; i<curr_channel->length; i++) {                             // read data from device
         response = put_user(curr_channel->message[i], buffer+i);
         if (response != 0){
             break;
         }
     }
     if (i != curr_channel->length) {
-        return -1; // WHY 0 ????????????????????????????????
+        return -EINVAL;
     }
     curr_channel->length = i;
     return i;
@@ -144,32 +144,31 @@ static ssize_t device_write( struct file* file, const char __user* buffer, size_
     channel* curr_channel;
     int i;
     device* curr_device = (device*) file->private_data;
-    printk("INSIDE WRITE, CHANNLE ID = %lu", curr_device->curr_channel_id);
     if (buffer == NULL) {
         return -EINVAL;
     }
     if (length <= 0 || length > BUFFER_SIZE) {
         return -EMSGSIZE;
     }
-    channel_id = curr_device->curr_channel_id;			// extract the current channel id
+    channel_id = curr_device->curr_channel_id;			                // extract the current channel id
     if (channel_id == 0){
-        return -1;
+        return -EINVAL;
     }
-    minor = curr_device->minor;                         // extract minor number
+    minor = curr_device->minor;                                         // extract minor number
     curr_channel = extract_channel(minor, channel_id);                  // extract current channel object
     if (curr_channel == NULL){
         return -EINVAL;
     }
-    curr_channel->message = (char*) kmalloc(sizeof(char)*length, GFP_KERNEL);
+    curr_channel->message = (char*) kmalloc(sizeof(char)*length, GFP_KERNEL); // allocates memory to message
     curr_channel->channel_id = channel_id;
     if (curr_channel->message == NULL) {
         return -EINVAL;
     }
-    for (i=0; i<length && i < BUFFER_SIZE; i++) {
+    for (i=0; i<length && i < BUFFER_SIZE; i++) {                                       // write data to device
         get_user(curr_channel->message[i], buffer+i);
     }
     if (i != length) {
-        return -1; // WHY 0 ????????????????????????????????
+        return -EINVAL;
     }
     curr_channel->length = length;
     return i;

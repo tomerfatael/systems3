@@ -24,14 +24,14 @@ int main(int argc, char *argv[]){
         perror("error during open file \n");
         exit(1);
     }
-    channel_id = strtol(argv[2], &response, strlen(argv[2]));
+    channel_id = strtol(argv[2], &response, 10);
 
-    ioctl_response = ioctl(fd, 1, channel_id);
+    ioctl_response = ioctl(fd, MSG_SLOT_CHANNEL, channel_id);
     if (ioctl_response != 0){
         perror("error during ioctl");
         exit(1);
     }
-    read_response = read(fd, buffer, BUFFER_SIZE); /* Read a message from message slot file to the buffer. */
+    read_response = read(fd, buffer, BUFFER_SIZE);
     if (read_response < 0){
         perror("error during read function");
         exit(1);

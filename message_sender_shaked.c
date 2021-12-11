@@ -24,7 +24,7 @@ int main(int argc, char** argv){
         exit(1);
     }
     // set desire channel id
-    ioctl_response = ioctl(fd, CHANNEL_ID, channel_id);
+    ioctl_response = ioctl(fd, MSG_SLOT_CHANNEL, channel_id);
     if (ioctl_response != 0) {
         perror("error during ioctl");
         exit(1);

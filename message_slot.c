@@ -165,7 +165,7 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
 static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsigned long ioctl_param) {
     DEVICE* device;
     CHANNEL* channel;
-    if (ioctl_command_id != MSG_SLOT_CHANNEL || ioctl_param == 0) {
+    if (ioctl_command_id != MSG_SLOT_CHANNEL || ioctl_param <= 0) {
         return -EINVAL;
     }
     device = (DEVICE*)file->private_data;
