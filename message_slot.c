@@ -165,7 +165,7 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
 static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsigned long ioctl_param) {
     DEVICE* device;
     CHANNEL* channel;
-    if (ioctl_command_id != MSG_SLOT_CHANNEL || ioctl_param <= 0) {
+    if (ioctl_command_id != MSG_SLOT_CHANNEL || ioctl_param == 0) {
         return -EINVAL;
     }
     device = (DEVICE*)file->private_data;
@@ -177,6 +177,19 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsig
         devicesMinorArr[device->minor]->length = 0;
         devicesMinorArr[device->minor]->message = NULL;
         devicesMinorArr[device->minor]->next = NULL;
+    }
+
+    else{
+        channel = findChannel(device->minor, device->curChannel);
+        if(channel == NULL) {
+            channel = (CHANNEL*) kmalloc(sizeof(CHANNEL), GFP_KERNEL);
+            if(channel == NULL) return -EINVAL;
+            channel->channelId = ioctl_param;
+            channel->length = 0;
+            channel->message = NULL;
+            channel->next = NULL;
+            addChannelToLL(channel, device->minor);
+        }
     }
 
     return SUCCESS;
