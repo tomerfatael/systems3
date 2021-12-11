@@ -18,14 +18,14 @@ int main(int argc, char** argv) {
         exit(1);
     }
     filePath = argv[1];
-    channelId = strtol(argv[2], &strt, strlen(atgv[2]));
+    channelId = strtol(argv[2], &strt, strlen(argv[2]));
 
     fd = open(filePath, O_RDONLY);
     if(fd == -1) {
         perror("failed to open file");
         exit(1);
     }
-    flag = ioctl(fd, MSG_SLOT_CHANNEL, channelId);
+    flag = ioctl(fd, 1, channelId);
     if(flag != 0) {
         perror("ioctl failed");
         exit(1);
