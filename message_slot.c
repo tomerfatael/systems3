@@ -94,16 +94,6 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
     CHANNEL* channel;
     int i;
     device = (DEVICE*)file->private_data;
-
-    if(devicesMinorArr[device->minor] == NULL){
-        devicesMinorArr[device->minor] = kmalloc(sizeof(CHANNEL), GFP_KERNEL);
-        if(devicesMinorArr[device->minor] == NULL) return -EINVAL;
-        devicesMinorArr[device->minor]->channelId = ioctl_param;
-        devicesMinorArr[device->minor]->length = 0;
-        devicesMinorArr[device->minor]->message = NULL;
-        devicesMinorArr[device->minor]->next = NULL;
-    }
-
     /*error cases*/
     if(device->curChannel == 0 || buffer == NULL) {
         return -EINVAL;
@@ -111,8 +101,6 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
     if(length == 0 || length > BUF_LEN) {
         return -EMSGSIZE;
     }
-
-
 
     channel = findChannel(device->minor, device->curChannel);
     if(channel == NULL) {
@@ -145,16 +133,6 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
     if(device == NULL){
         return -EINVAL;
     }
-
-    if(devicesMinorArr[device->minor] == NULL){
-        devicesMinorArr[device->minor] = kmalloc(sizeof(CHANNEL), GFP_KERNEL);
-        if(devicesMinorArr[device->minor] == NULL) return -EINVAL;
-        devicesMinorArr[device->minor]->channelId = ioctl_param;
-        devicesMinorArr[device->minor]->length = 0;
-        devicesMinorArr[device->minor]->message = NULL;
-        devicesMinorArr[device->minor]->next = NULL;
-    }
-
     /*there is no channel in the provided device*/
     if(device->curChannel == 0 || buffer == NULL) {
         return -EINVAL;
@@ -171,8 +149,6 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
     if(length < channel->length) {
         return -ENOSPC;
     }
-
-
 
     for(i = 0; i < channel->length; i++) {
         put_user(channel->message[i], &buffer[i]);  
@@ -194,6 +170,15 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsig
     }
     device = (DEVICE*)file->private_data;
     device->curChannel = ioctl_param;
+    if(devicesMinorArr[device->minor] == NULL){
+        devicesMinorArr[device->minor] = kmalloc(sizeof(CHANNEL), GFP_KERNEL);
+        if(devicesMinorArr[device->minor] == NULL) return -EINVAL;
+        devicesMinorArr[device->minor]->channelId = ioctl_param;
+        devicesMinorArr[device->minor]->length = 0;
+        devicesMinorArr[device->minor]->message = NULL;
+        devicesMinorArr[device->minor]->next = NULL;
+    }
+
     return SUCCESS;
 }
 
