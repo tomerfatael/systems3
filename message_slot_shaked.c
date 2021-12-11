@@ -29,6 +29,7 @@ void update_channels_list(channel* new_node, unsigned int minor) {
         head->next = new_node;
     }
 }
+
 channel* extract_channel(unsigned int minor, unsigned int channel_id){
     channel* head = NULL;
     head = open_devices[minor];
