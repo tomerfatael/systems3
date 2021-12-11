@@ -78,6 +78,14 @@ static int device_open(struct inode* inode, struct file* file) { //todo and unde
     }
     device->minor = minor;
     device->curChannel = 0;
+    if(devicesMinorArr[minor] == NULL) {
+        devicesMinorArr[minor] = kmalloc(sizeof(CHANNEL), GFP_KERNEL);
+        if(devicesMinorArr[minor] == NULL) return 1;
+        devicesMinorArr[minor]->length = 0;
+        devicesMinorArr[minor]->channelId = 0;
+        devicesMinorArr[minor]->message = NULL;
+        devicesMinorArr[minor]->next = NULL;
+}
     file->private_data = (void*)device;
     return SUCCESS;
 }
@@ -163,35 +171,9 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
 
 /*device ioctl*/
 static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsigned long ioctl_param) {
-    DEVICE* device;
-    CHANNEL* channel;
-    if (ioctl_command_id != MSG_SLOT_CHANNEL || ioctl_param <= 0) {
+    if (ioctl_command_id != MSG_SLOT_CHANNEL || ioctl_param == 0) {
         return -EINVAL;
-    }
-    device = (DEVICE*)file->private_data;
-    device->curChannel = ioctl_param;
-    if(devicesMinorArr[device->minor] == NULL){
-        devicesMinorArr[device->minor] = kmalloc(sizeof(CHANNEL), GFP_KERNEL);
-        if(devicesMinorArr[device->minor] == NULL) return -EINVAL;
-        devicesMinorArr[device->minor]->channelId = ioctl_param;
-        devicesMinorArr[device->minor]->length = 0;
-        devicesMinorArr[device->minor]->message = NULL;
-        devicesMinorArr[device->minor]->next = NULL;
-    }
-
-    else{
-        channel = findChannel(device->minor, device->curChannel);
-        if(channel == NULL) {
-            channel = (CHANNEL*) kmalloc(sizeof(CHANNEL), GFP_KERNEL);
-            if(channel == NULL) return -EINVAL;
-            channel->channelId = ioctl_param;
-            channel->length = 0;
-            channel->message = NULL;
-            channel->next = NULL;
-            addChannelToLL(channel, device->minor);
-        }
-    }
-
+    ((DEVICE*)file->private_data)->curChannel = ioctl_param;
     return SUCCESS;
 }
 
