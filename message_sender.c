@@ -12,7 +12,7 @@ int main(int argc, char** argv) {
     long flag;
     int fd;
     
-    if(argc != 4) {
+    if(argc < 4) {
         perror("invalid input");
         exit(1);
     }
@@ -31,10 +31,10 @@ int main(int argc, char** argv) {
         exit(1);
     }
     flag = write(fd, message, strlen(message));
-    close(fd);
     if(flag != strlen(message)){
         perror("write failed");
         exit(1);
     }
+    close(fd);
     return SUCCESS;
 }

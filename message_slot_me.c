@@ -98,27 +98,27 @@ static int device_open(struct inode* inode, struct file* file) { //todo and unde
 }
 
 /*device release*/
-static int device_release(struct inode* inode, struct file* file) { //dont need to free all allocated memory for device and channels?
+static int device_release(struct inode* inode, struct file* file) { 
     kfree(file->private_data);
     return SUCCESS;
 }
 
-/*device write*/
-static ssize_t device_write(struct file* file, const char __user* buffer, size_t length, loff_t* offset) {
-    DEVICE* device;
-CHANNEL* channel;
-int i;
-device = (DEVICE*)file->private_data;
-/*error cases*/
-if(device == NULL){
-return -EINVAL;
-}
-if(device->curChannel == 0 || buffer == NULL) {
-return -EINVAL;
-}
-if(length == 0 || length > BUF_LEN) {
-        return -EMSGSIZE;
+    /*device write*/
+    static ssize_t device_write(struct file* file, const char __user* buffer, size_t length, loff_t* offset) {
+        DEVICE* device;
+    CHANNEL* channel;
+    int i;
+    device = (DEVICE*)file->private_data;
+    /*error cases*/
+    if(device == NULL){
+    return -EINVAL;
     }
+    if(device->curChannel == 0 || buffer == NULL) {
+    return -EINVAL;
+    }
+    if(length == 0 || length > BUF_LEN) {
+            return -EMSGSIZE;
+        }
 
     channel = findChannel(device->minor, device->curChannel);
     if(channel == NULL) {
@@ -160,9 +160,9 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
         return -EINVAL;
     }
     channel = findChannel(device->minor, device->curChannel);
-if(channel == NULL) {
-return -EINVAL;
-}
+    if(channel == NULL) {
+    return -EINVAL;
+    }
     /*there is no message in the channel*/
     //TODO: make sure length is updated correctly!
     if(channel->message == NULL) {
@@ -173,14 +173,15 @@ return -EINVAL;
         return -ENOSPC;
     }
 
-    for(i = 0; i < channel->length && i < BUF_LEN; i++) {
+    for(i = 0; i < channel->length; i++) {
         put_user(channel->message[i], &buffer[i]);  
     }
 
-    if(length != i) {
+    if(channel->length != i) {
         return -EINVAL; 
     }
-    return length;
+    channel->length = i;
+    return channel->length;
 }
 
 /*device ioctl*/

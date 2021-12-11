@@ -13,7 +13,7 @@ int main(int argc, char** argv) {
     int fd;
     char buffer[BUF_LEN];
     
-    if(argc != 3){
+    if(argc < 3){
         perror("invalid input");
         exit(1);
     }
@@ -32,11 +32,11 @@ int main(int argc, char** argv) {
     }
     
     flag = read(fd, buffer, BUF_LEN);
-    close(fd);
     if(flag < 0) {
         perror("read failed");
         exit(1);
     }
+    close(fd);
     return SUCCESS;
 
 }
