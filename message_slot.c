@@ -139,7 +139,7 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
     }
     channel = findChannel(device->minor, device->curChannel);
     if(channel == NULL) {
-    return -EINVAL;
+        return -EINVAL;
     }
     /*there is no message in the channel*/
     if(channel->message == NULL) {

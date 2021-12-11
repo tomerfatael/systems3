@@ -3,12 +3,12 @@
 #include <sys/ioctl.h>
 #include<stdlib.h>
 #include <stdio.h>
-#include <fcntl.h> //check if need
+#include <fcntl.h> 
 #include <zconf.h>
 
 int main(int argc, char** argv) {
-    char *filePath, *message;
-    unsigned int channelId;
+    char *filePath, *message, *strt;
+    unsigned long channelId;
     long flag;
     int fd;
     
@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
         exit(1);
     }
     filePath = argv[1];
-    channelId = atoi(argv[2]);
+    channelId = strtol(argv[2], &strt, 10);
     message = argv[3];
 
     fd = open(filePath, O_RDWR);
