@@ -35,30 +35,24 @@ void freeChannelsLL(CHANNEL* head) {
     node = head;
     while(node != NULL) {
         next = node->next;
-        if (node->message != NULL){
-        kfree(node->message);}
+        kfree(node->message);
         kfree(node);
         node = next;
     }
 }
 
 /*add new channel*/
-CHANNEL* addChannelToLL(int minor, unsigned long channelId) {
-    CHANNEL *channel, *head;
-    channel = kmalloc(sizeof(CHANNEL), GFP_KERNEL);
-    if(channel == NULL) {
-        return NULL;
+void addChannelToLL(CHANNEL* channel, int minor) {
+    CHANNEL *head;
+    if(devicesMinorArr[minor] == NULL) {
+        devicesMinorArr[minor] = channel;
+        return;
     }
-    channel->channelId = channelId;
-    channel->length = 0;
 
     head = devicesMinorArr[minor];
-
-    while(head->next != NULL) {
-        head = head->next;
-    }
+    while(head->next != NULL) head = head->next;
     head->next = channel;
-    return channel;
+    return;
 }
 
 /*find channel by id*/
@@ -84,15 +78,6 @@ static int device_open(struct inode* inode, struct file* file) { //todo and unde
     }
     device->minor = minor;
     device->curChannel = 0;
-    if(devicesMinorArr[minor] == NULL) {
-        devicesMinorArr[minor] = kmalloc(sizeof(CHANNEL), GFP_KERNEL);
-        if(devicesMinorArr[minor] == NULL) return 1;
-        devicesMinorArr[minor]->length = 0;
-        devicesMinorArr[minor]->channelId = 0;
-        devicesMinorArr[minor]->message = NULL;
-        devicesMinorArr[minor]->next = NULL;
-
-    }
     file->private_data = (void*)device;
     return SUCCESS;
 }
@@ -103,33 +88,28 @@ static int device_release(struct inode* inode, struct file* file) {
     return SUCCESS;
 }
 
-    /*device write*/
-    static ssize_t device_write(struct file* file, const char __user* buffer, size_t length, loff_t* offset) {
-        DEVICE* device;
+/*device write*/
+static ssize_t device_write(struct file* file, const char __user* buffer, size_t length, loff_t* offset) {
+    DEVICE* device;
     CHANNEL* channel;
     int i;
     device = (DEVICE*)file->private_data;
     /*error cases*/
-    if(device == NULL){
-    return -EINVAL;
-    }
     if(device->curChannel == 0 || buffer == NULL) {
-    return -EINVAL;
+        return -EINVAL;
     }
     if(length == 0 || length > BUF_LEN) {
-            return -EMSGSIZE;
-        }
+        return -EMSGSIZE;
+    }
 
     channel = findChannel(device->minor, device->curChannel);
     if(channel == NULL) {
-        channel = addChannelToLL(device->minor, device->curChannel);
-        if(channel == NULL) {
-            return -EINVAL;
-        }
-    }
-    channel->message = kmalloc(sizeof(char)*length, GFP_KERNEL);
-    if(channel->message == NULL) {
         return -EINVAL;
+    }
+
+    channel->message = (char*)kmalloc(sizeof(char)*length, GFP_KERNEL);
+    if(channel->message == NULL) {
+    return -EINVAL;
     }
 
     /*no errors*/
@@ -137,13 +117,11 @@ static int device_release(struct inode* inode, struct file* file) {
         get_user(channel->message[i], &buffer[i]);
     }
 
-    if(length == i) {
-        channel->length = length;
-        return length;
+    if(i != length) {
+        return -1;
     }
-    else{ /*error has occured while trying to write data*/ 
-        return 0; 
-    }
+    channel->length = length;
+    return i;
 }
 
 /*device read*/
@@ -153,7 +131,7 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
     int i;
     device = (DEVICE*)file->private_data;
     if(device == NULL){
-    return -EINVAL;
+        return -EINVAL;
     }
     /*there is no channel in the provided device*/
     if(device->curChannel == 0 || buffer == NULL) {
@@ -164,7 +142,6 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
     return -EINVAL;
     }
     /*there is no message in the channel*/
-    //TODO: make sure length is updated correctly!
     if(channel->message == NULL) {
         return -EWOULDBLOCK;
     }
@@ -181,13 +158,40 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
         return -EINVAL; 
     }
     channel->length = i;
-    return channel->length;
+    return i;
 }
 
 /*device ioctl*/
 static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsigned long ioctl_param) {
-    if(ioctl_command_id != MSG_SLOT_CHANNEL || ioctl_param == 0) return -EINVAL;
-    ((DEVICE*)file->private_data)->curChannel = ioctl_param;
+    DEVICE* device;
+    CHANNEL* channel;
+    if (ioctl_command_id != MSG_SLOT_CHANNEL || ioctl_param == 0) {
+        return -EINVAL;
+    }
+    device = (DEVICE*)file->private_data;
+    device->curChannel = ioctl_param;
+    if(devicesMinorArr[device->minor] == NULL){
+        devicesMinorArr[device->minor] = kmalloc(sizeof(CHANNEL), GFP_KERNEL);
+        if(devicesMinorArr[device->minor] == NULL) return -EINVAL;
+        devicesMinorArr[device->minor]->channelId = ioctl_param;
+        devicesMinorArr[device->minor]->length = 0;
+        devicesMinorArr[device->minor]->message = NULL;
+        devicesMinorArr[device->minor]->next = NULL;
+    }
+
+    else{
+        channel = findChannel(device->minor, device->curChannel);
+        if(channel == NULL) {
+            channel = (CHANNEL*) kmalloc(sizeof(CHANNEL), GFP_KERNEL);
+            if(channel == NULL) return -EINVAL;
+            channel->channelId = ioctl_param;
+            channel->length = 0;
+            channel->message = NULL;
+            channel->next = NULL;
+            addChannelToLL(channel, device->minor);
+        }
+    }
+
     return SUCCESS;
 }
 
@@ -206,14 +210,14 @@ static int __init simple_init(void) {
 
     int registerSuccess;
     //Register driver capabilities. Obtain major num
-    registerSuccess = register_chrdev(240, DEVICE_RANGE_NAME, &Fops);
+    registerSuccess = register_chrdev(MAJOR_NUM, DEVICE_RANGE_NAME, &Fops);
     // Negative values signify an error
     if(registerSuccess < 0) {
-    printk(KERN_ALERT "%s registraion failed for  %d\n",DEVICE_FILE_NAME, 240);
+    printk(KERN_ALERT "%s registraion failed for  %d\n",DEVICE_FILE_NAME, MAJOR_NUM);
     return registerSuccess;
     }
 
-    printk( "Registeration is successful. The major device number is %d.\n", 240);
+    printk( "Registeration is successful. The major device number is %d.\n", MAJOR_NUM);
     return 0;
 }
 
@@ -225,7 +229,7 @@ static void __exit simple_cleanup(void) { //need to clean LL or in device releas
            freeChannelsLL(devicesMinorArr[i]);
        }
    }
-    unregister_chrdev(240, DEVICE_RANGE_NAME);
+    unregister_chrdev(MAJOR_NUM, DEVICE_RANGE_NAME);
 }
 
 module_init(simple_init);

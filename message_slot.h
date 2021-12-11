@@ -7,6 +7,7 @@
 #define SUCCESS 0
 #define DEVICE_RANGE_NAME "message_slot"
 #define BUF_LEN 128
+#define MAJOR_NUM 240
 #define DEVICE_FILE_NAME "message_slot_dev"
 
 #endif 
